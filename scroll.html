@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+		<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=utf-8">
+		<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+		<style>
+			*{
+				margin:0;
+				padding:0;
+			}
+			html,body{
+				width: 100%;
+				height: 100%;
+			}
+			ul,ol li{
+				list-style: none;
+			}
+			.wraper{
+				width: 500px;
+				height: 500px;
+				border:1px solid #ccc;
+				margin:20px auto;
+			}
+			.tabWraper{
+				height: 34px;
+				border-bottom: 1px solid #eee;
+				color: #666;
+				background: #f8f8f8;
+			}
+			.tabItem{
+				float: left;
+				font-size: 14px;
+				line-height: 34px;
+				text-align: center;
+				border-right: 1px solid #eee;
+				padding:0 20px;
+				overflow: hidden;
+			}
+			.active{
+				color: green;
+				background: #fff;
+				border-top: 2px solid green;
+				margin:-1px 0;
+			}
+			.srcrollWraper{
+				width: 100%;
+				height: 465px;
+				position: relative;
+			}
+			.scrollContent{
+				width: 100%;
+				height: 100%;
+				overflow: hidden;
+			}
+			.one{
+				width: 800px;
+				height: 400px;
+				background: red;
+			}
+			.two{
+				width: 800px;
+				height: 300px;
+				background: orange;
+			}
+			.three{
+				width: 800px;
+				height:500px;
+				background: pink;
+			}
+			.four{
+				width: 800px;
+				height: 300px;
+				background: yellow;
+			}
+			.scrollBar{
+				position: absolute;
+				top: 0;
+				right: 0;
+				width: 10px;
+				height: 100%;
+				background: #ddd;
+				/* left: 0;
+				right: 0;
+				bottom: 0;
+				height: 10px;
+				width: 100%; */
+			}
+			.scrollSlider{
+				position: absolute;
+				top: 0;
+				left: 1px;
+				width: 8px;
+				height: 30px;
+				background: #fff;
+				/* left: 0;
+				top: 1px;
+				height: 8px;
+				width: 30px; */
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wraper">
+
+			<ul class="tabWraper">
+				<li class="tabItem active">第一篇</li>
+				<li class="tabItem">第二篇</li>
+				<li class="tabItem">第三篇</li>
+				<li class="tabItem">第四篇</li>
+			</ul>
+			<div class="srcrollWraper">
+				<div class="scrollContent">
+					<div class="one page">第一篇</div>
+					<div class="two page">第二篇</div>
+					<div class="three page">第三篇</div>
+					<div class="four page">第四篇</div>
+					<div class="correct"></div>
+				</div>
+				<div class="scrollBar">
+					<div class="scrollSlider"></div>
+				</div>
+			</div>
+		</div>
+		
+	</body>
+	<script src='jquery-2.1.1.min.js'></script>
+	<script>
+		(function(win,doc,$){
+			function Scroll(options){
+				this._init(options);				
+			}
+			$.extend(Scroll.prototype,{
+				_init:function(options){
+					var that=this;
+					that.options={
+						scrollDirect:"y", //滚动放向
+						contentSelector:"",  //滚动内容可视区选择器
+						barSelector:"",	  //滚动条选择器
+						sliderSelector:"", //滚动滑块选择器
+						content:"",		 //滚动内容
+						wheelStep:10,    //滚轮步长值
+						tabItemSelector:".tabItem",
+						tabItemActive:"active",
+						page:'.page',
+						correct:'.correct'
+					}
+					$.extend(true,that.options,options||{});
+					this._initDomEvent();
+				},
+				//初始化dom元素的
+				_initDomEvent:function(){
+					var opts=this.options;
+					this.cont=$(opts.contentSelector);
+					this.slider=$(opts.sliderSelector);
+					this.scrollbar=$(opts.barSelector);
+					this.doc=$(doc);
+					this.content=$(opts.content);
+					this.tabItem=$(opts.tabItemSelector);	
+					this.correct=$(opts.correct);
+					this.page=$(opts.page);
+					this.active=opts.tabItemActive;					
+					this.direct=opts.scrollDirect;
+					//调用绑定事件
+					this._initDragEvent();
+					this.bindContentScroll();
+					this.bindMousewheel();
+					this._initTabEvent();
+					this._initDocHeight();
+					console.log(this.direct)
+				},
+				//初始化滑块的移动
+				_initDragEvent:function(){
+					var slider=this.slider,that=this;
+					sliderEle=slider[0];
+					if(sliderEle){
+						var doc=this.doc,
+							dragStart,
+							dragStartScroll,
+							dragContBarRate;
+						slider.on("mousedown",function(e){
+							e.preventDefault();
+							if(that.direct=='y'){
+								dragStart=e.pageY;
+								dragStartScroll=that.content[0].scrollTop;
+							}else if(that.direct=='x'){
+								dragStart=e.pageX;
+								dragStartScroll=that.content[0].scrollLeft;
+							}
+							console.log(that.direct)
+							dragContBarRate=that.getScrollPosition()/that.getSliderPosition();
+							doc.on("mousemove.scroll",function(e){
+								e.preventDefault();
+								if(dragStart==null){
+									return
+								}else{
+									if(that.direct=='y'){
+										that.scrollTo(dragStartScroll+(e.pageY-dragStart)*dragContBarRate);
+									}else if(that.direct=='x'){
+										that.scrollTo(dragStartScroll+(e.pageX-dragStart)*dragContBarRate);
+									}
+								}
+								
+								})
+							.on("mouseup.scroll",function(e){
+									doc.off(".scroll")
+								})
+						})
+					}
+				},
+				//内容可滚动高度
+				getScrollPosition:function(){
+					var that=this,srcollContentHeight;
+					//取这两个值的最大值作为内容的整体高度
+					if(this.direct=='y'){
+						srcollContentHeight=Math.max(that.content.height(),that.content[0].scrollHeight)-that.cont.height();//内容可视区高度
+					}else if(this.direct=='x'){
+						srcollContentHeight=Math.max(that.content.width(),that.content[0].scrollWidth)-that.cont.width();//内容可视区宽度
+					}
+					
+					return srcollContentHeight;
+				},
+				//滑块可滚动高度
+				getSliderPosition:function(){
+					var that=this,scrollSliderHeight;
+					if(this.direct=='y'){
+					scrollSliderHeight=that.scrollbar.height()-that.slider.height();
+					}else if(this.direct=='x'){
+					scrollSliderHeight=that.scrollbar.width()-that.slider.width();
+					}					
+					return scrollSliderHeight;
+				},
+				//内容区域滚动高度
+				scrollTo:function(positionVal){
+					var that=this;
+					if(this.direct=='y'){
+							var pageArr=this.getAllPageHeight();
+						function getIndexd(positionVal){
+							for(var i=pageArr.length-1;i>=0;i--){
+								if(positionVal>=pageArr[i]){
+									return i;
+								}
+							}
+						}
+						this.tabItem.eq(getIndexd(positionVal)).addClass(that.active).siblings().removeClass(that.active);
+						that.content.scrollTop(positionVal);
+					}else if(this.direct=='x'){
+						that.content.scrollLeft(positionVal);
+					}								
+				},
+				//滑块一次走的距离
+				getSlider:function(){
+					var that=this,
+					maxSliderPosition=that.getSliderPosition();
+					if(this.direct=='y'){
+						return Math.min(maxSliderPosition,maxSliderPosition*that.content[0].scrollTop/that.getScrollPosition());
+					}else if(this.direct=='x'){
+						return Math.min(maxSliderPosition,maxSliderPosition*that.content[0].scrollLeft/that.getScrollPosition());
+					}
+					
+
+				},
+				//滑块滚动
+				bindContentScroll:function(){
+					var that=this;
+					that.content.on("scroll",function(){
+						var sliderEle=that.slider;
+						if(sliderEle){
+							if(that.direct=='y'){
+								sliderEle.css("top",that.getSlider()+'px')
+							}else if(that.direct=='x'){
+								sliderEle.css("left",that.getSlider()+'px')
+							}
+						}
+					})
+				},
+				//滚轮事件
+				bindMousewheel:function(){
+					var that=this;
+					//其他浏览器 mousewheel  wheelDelta  120  火狐浏览器 DOMMouseScroll detail 3
+					that.content.on("mousewheel DOMMouseScroll",function(e){
+						e.preventDefault();
+						var ele=e.originalEvent,
+						wheelRange=ele.wheelDelta ? -ele.wheelDelta/120 : (ele.detail || 0)/3;
+						if(that.direct=='y'){
+							that.scrollTo(that.content[0].scrollTop+wheelRange*that.options.wheelStep)
+						}else if(that.direct=='x'){
+							that.scrollTo(that.content[0].scrollLeft+wheelRange*that.options.wheelStep)
+						}
+					})
+				},
+				//切换tab
+				_initTabEvent:function(){
+					var that=this;
+					that.tabItem.on("click",function(){
+						var index=$(this).index();
+						$(this).addClass(that.active).siblings().removeClass(that.active);
+						var indEle=that.page.eq(index).position().top;
+						console.log(indEle)
+						that.scrollTo(that.content[0].scrollTop+indEle)
+					})
+				},
+				//初始化文档高度
+				_initDocHeight:function(){
+					var lastPageHeight=this.page.last().height();
+					var clientHeight=this.cont.height();
+					if(lastPageHeight<clientHeight){
+					this.correct.css('height',clientHeight-lastPageHeight+'px')
+					}					
+				},
+				getAllPageHeight:function(){
+					var arr=[];
+					for(var i=0; i<this.page.length;i++){
+						arr.push(this.content[0].scrollTop+this.page.eq(i).position().top)
+					}
+					return arr;
+				}
+			})
+			win.Scroll=Scroll;
+		})(window,document,jQuery)
+		var scrollbar=new Scroll({
+			contentSelector:".srcrollWraper",
+			barSelector:".scrollBar",
+			sliderSelector:".scrollSlider",
+			content:'.scrollContent'
+		})
+	</script>
+</html>
